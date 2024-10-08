@@ -1,0 +1,34 @@
+---
+title: "rapport"
+author: "Franklin BECK"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+df=read.csv2("dpe-v2-logements-existants.csv",,",")
+```
+kookoo
+```{r}
+round(as.integer(table(df$Date_fin_validité_DPE>Sys.Date())["TRUE"])/length(df$Date_fin_validité_DPE)*100,2) #% dpe valide
+
+pie(c(table(df$Etiquette_DPE)),main = "Répartition DPE par catégorie")
+
+round(as.integer(table(df$Présence_production_PV_.0.1.)["1"])/sum(!is.na(df$Présence_production_PV_.0.1.))*100,2) #% des logements avec des panneaux 
+
+plot(df$Production_ecs_solaire_installation) #production des panneaux 
+
+#corrélogramme : Q1 chap1 git du prof
+
+```
+#plot# Créer un vecteur de données
+valeurs = as.vector(table(df$Etiquette_DPE))
+
+# Noms des barres
+noms = sort(unique(df$Etiquette_DPE))
+
+barplot(valeurs, names.arg = noms, main = "Graphique en Barres", col = "lightblue", xlab = "Catégories", ylab = "Fréquence")
+
+# Créer le diagramme circulaire
+pie(valeurs, labels = noms, main = "Diagramme Circulaire")
