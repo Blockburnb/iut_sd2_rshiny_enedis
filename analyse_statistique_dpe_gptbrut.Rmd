@@ -1,0 +1,62 @@
+---
+title: "Analyse Statistique des Diagnostics de Performance Énergétique 2"
+author: "Franklin BECK"
+date: "`r Sys.Date()`"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+# Initial setup
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(readr)
+library(lubridate)
+```
+```{r}
+# Chargement des données
+data <- read_csv("dpe-v2-logements-existants.csv")
+
+# Afficher les premières lignes du jeu de données
+head(data)
+
+# Aperçu des colonnes et types de données
+str(data)
+
+# Distribution des dates de réception du DPE
+ggplot(data, aes(x = Date_réception_DPE)) + 
+  geom_histogram(binwidth = 30, fill = "blue", color = "black") +
+  labs(title = "Distribution des dates de réception du DPE", x = "Date", y = "Nombre de DPE")
+
+# Analyse des sources d'énergie
+energy_data <- data %>%
+  group_by(Type_énergie_climatisation) %>%
+  summarise(Count = n()) %>%
+  arrange(desc(Count))
+
+# Graphique des types d'énergie
+ggplot(energy_data, aes(x = reorder(Type_énergie_climatisation, -Count), y = Count)) +
+  geom_bar(stat = "identity", fill = "orange") +
+  labs(title = "Répartition des types d'énergie", x = "Type d'énergie", y = "Nombre de logements") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+# Corrélation entre surface climatisée et consommation énergétique
+correlation <- cor(data$Surface_climatisée, data$`Production_électricité_PV_(kWhep/an)`, use = "complete.obs")
+cat("La corrélation entre la surface climatisée et la production d'électricité photovoltaïque est : ", correlation)
+
+# Table de contingence pour le type d'énergie et la classe énergétique
+contingency_table <- table(data$Type_énergie_climatisation, data$Etiquette_DPE,useNA = "always")
+
+# Test du khi-deux
+chi_square_test <- chisq.test(contingency_table)
+
+# Résultat du test du Khi-deux
+cat("Le test du Khi-deux donne une p-valeur de : ", chi_square_test$p.value)
+```
+### Points à noter :
+1. **Corrélation** : Le bloc de code calcule la corrélation entre la surface climatisée et la production d'électricité photovoltaïque.
+2. **Khi-deux** : Le test du khi-deux explore l'association entre deux variables catégorielles, ici le type d'énergie et la classe énergétique.
+3. **Régression linéaire** : Le modèle de régression linéaire est utilisé pour explorer la relation entre la surface climatisée et la production d'électricité.
+
+Vous pouvez copier ce code dans votre fichier RMarkdown et l'exécuter directement pour obtenir les analyses demandées.

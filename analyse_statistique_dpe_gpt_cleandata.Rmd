@@ -1,0 +1,105 @@
+
+---
+title: "Analyse Statistique des Diagnostics de Performance Énergétique"
+author: "Auteur"
+date: "`r Sys.Date()`"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+# Initial setup
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(readr)
+library(lubridate)
+```
+
+# Introduction
+
+Ce document présente une analyse statistique des données des diagnostics de performance énergétique (DPE) sur les logements existants. L'objectif est de comprendre les tendances et caractéristiques liées aux performances énergétiques des logements, ainsi que les sources d'énergie utilisées.
+
+# Chargement et exploration des données
+
+```{r load-data}
+# Chargement des données
+data <- read_csv("dpe-v2-logements-existants.csv")
+
+# Afficher les premières lignes du jeu de données
+head(data)
+
+# Aperçu des colonnes et types de données
+str(data)
+```
+
+# Préparation des données
+
+Avant de procéder à l'analyse, nous devons nettoyer et préparer les données. Nous allons gérer les valeurs manquantes, et convertir certains types de données pour assurer leur compatibilité.
+
+```{r clean-data}
+# Gestion des valeurs manquantes (exemple : suppression des colonnes avec trop de valeurs manquantes)
+threshold <- 0.7  # Seuil de 70% de valeurs manquantes
+data_clean <- data %>% select_if(~mean(is.na(.)) < threshold)
+
+# Conversion des dates en format Date
+data_clean <- data_clean %>%
+  mutate(across(contains("Date"), ymd, .names = "clean_{col}"))
+
+# Vérification après nettoyage
+str(data_clean)
+```
+
+# Analyse descriptive
+
+Nous allons maintenant explorer certaines variables importantes, comme la répartition des dates des DPE, les étiquettes énergétiques, et les systèmes d'énergie.
+
+```{r descriptive-analysis}
+# Distribution des dates de réception du DPE
+ggplot(data_clean, aes(x = clean_Date_réception_DPE)) + 
+  geom_histogram(binwidth = 30, fill = "blue", color = "black") +
+  labs(title = "Distribution des dates de réception du DPE", x = "Date", y = "Nombre de DPE")
+
+# Analyse des sources d'énergie
+energy_data <- data_clean %>%
+  group_by(Type_énergie_climatisation) %>%
+  summarise(Count = n()) %>%
+  arrange(desc(Count))
+
+# Graphique des types d'énergie
+ggplot(energy_data, aes(x = reorder(Type_énergie_climatisation, -Count), y = Count)) +
+  geom_bar(stat = "identity", fill = "orange") +
+  labs(title = "Répartition des types d'énergie", x = "Type d'énergie", y = "Nombre de logements") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+# Analyse multivariée
+
+Nous allons étudier la relation entre la surface climatisée et le type d'énergie utilisé.
+
+```{r multivariate-analysis}
+# Surface climatisée vs Type d'énergie
+ggplot(data_clean, aes(x = Surface_climatisée, fill = Type_énergie_climatisation)) +
+  geom_histogram(binwidth = 10) +
+  labs(title = "Relation entre surface climatisée et type d'énergie", x = "Surface climatisée", y = "Nombre de logements")
+```
+```{r}
+# Calcul de statistiques bivariées
+
+## Corrélation entre surface climatisée et consommation énergétique
+correlation <- cor(data_clean$Surface_climatisée, data_clean$Consommation_énergétique, use = "complete.obs")
+cat("La corrélation entre la surface climatisée et la consommation énergétique est : ", correlation)
+
+## Test du Khi-deux pour type d'énergie et classe énergétique
+contingency_table <- table(data_clean$Type_énergie_climatisation, data_clean$Classe_énergétique)
+chi_square_test <- chisq.test(contingency_table)
+cat("Le test du Khi-deux donne une p-valeur de : ", chi_square_test$p.value)
+
+## Régression linéaire
+linear_model <- lm(Consommation_énergétique ~ Surface_climatisée + Type_énergie_climatisation, data = data_clean)
+summary(linear_model)
+```
+
+# Conclusion
+
+Cette analyse fournit une vue d'ensemble des performances énergétiques des logements et des sources d'énergie associées. Des analyses plus approfondies pourraient inclure des relations plus détaillées entre les caractéristiques des logements et leur performance énergétique.
