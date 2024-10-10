@@ -7,28 +7,63 @@ output: pdf_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+
+library(ggplot2)
+library(scales)
+library(lubridate)
+
 df=read.csv2("dpe-v2-logements-existants.csv",,",")
+
+# Conversion de la colonne 'Date_réception_DPE' en format Date
+df$Date_réception_DPE <- as.Date(df$Date_réception_DPE, format = "%Y-%m-%d")
 ```
 kookoo
-```{r}
-round(as.integer(table(df$Date_fin_validité_DPE>Sys.Date())["TRUE"])/length(df$Date_fin_validité_DPE)*100,2) #% dpe valide
+```{r kpi}
+length(df$Etiquette_DPE) #nb dpe distribué
 
-pie(c(table(df$Etiquette_DPE)),main = "Répartition DPE par catégorie")
+df$Date_réception_DPE[which.min(df$Date_réception_DPE)]# Afficher le DPE le plus ancien
+
+df$Date_réception_DPE[which.max(df$Date_réception_DPE)]# Afficher le DPE le plus recent
+
+round(as.integer(table(df$Date_fin_validité_DPE>Sys.Date())["TRUE"])/length(df$Date_fin_validité_DPE)*100,2) #% dpe valide
 
 round(as.integer(table(df$Présence_production_PV_.0.1.)["1"])/sum(!is.na(df$Présence_production_PV_.0.1.))*100,2) #% des logements avec des panneaux 
 
-plot(df$Production_ecs_solaire_installation) #production des panneaux 
+# Corrélation entre surface climatisée et consommation énergétique
+correlation <- cor(as.numeric(df$Surface_climatisée), as.numeric(df$Production_électricité_PV_.kWhep.an.), use = "complete.obs")
+cat("La corrélation entre la surface climatisée et la production d'électricité photovoltaïque est : ", correlation)
+
+# Remplacer les NA dans la colonne Surface_climatisée par 0
+#df$Surface_climatisée <- replace(df$Surface_climatisée, is.na(df$Surface_climatisée), 0)
 
 #corrélogramme : Q1 chap1 git du prof
 
 ```
-#plot# Créer un vecteur de données
-valeurs = as.vector(table(df$Etiquette_DPE))
+La corrélation entre la surface climatisée et la production d'électricité photovoltaïque
+Exploration de la relation linéaire : Ce calcul permet de vérifier s'il existe une relation linéaire entre la surface climatisée et la production d'électricité photovoltaïque.
 
-# Noms des barres
-noms = sort(unique(df$Etiquette_DPE))
+Si la corrélation est proche de 1, cela suggère que plus un bâtiment a une grande surface climatisée, plus il tend à produire d'électricité photovoltaïque.
+Si la corrélation est proche de 0, cela signifie qu'il n'y a pas de relation linéaire entre ces deux variables.
+Si la corrélation est proche de -1, cela indiquerait que plus la surface climatisée est grande, plus la production d'électricité photovoltaïque est faible.
+Hypothèses possibles :
 
-barplot(valeurs, names.arg = noms, main = "Graphique en Barres", col = "lightblue", xlab = "Catégories", ylab = "Fréquence")
+Corrélation positive attendue : Une hypothèse pourrait être que les bâtiments ayant une plus grande surface climatisée sont de plus grande taille et sont donc plus susceptibles d'avoir de l'espace pour installer des panneaux photovoltaïques. Cela pourrait conduire à une corrélation positive.
+Corrélation nulle ou faible : Si la corrélation est faible ou nulle, cela pourrait suggérer que la surface climatisée n'a pas d'impact direct sur la quantité d'électricité produite par les panneaux photovoltaïques. En effet, la production d'électricité PV dépend davantage de la surface disponible pour les panneaux solaires et de l'ensoleillement, plutôt que de la surface climatisée.
+```{r graph}
+# Graphique en camembert
+dpe_counts <- table(df$Etiquette_DPE)
+colors <- rainbow(length(dpe_counts))
+pie(dpe_counts,labels = "", col = colors, main = "Répartition DPE par catégorie")
+legend("bottomright", legend = names(dpe_counts), fill = colors, box.lty = 1, title = "Catégories DPE")
 
-# Créer le diagramme circulaire
-pie(valeurs, labels = noms, main = "Diagramme Circulaire")
+#plot(df$Production_ecs_solaire_installation) #production des panneaux #pas vrmt exploitiable
+
+# Histogramme avec labels de l'axe x au format trimestre-année
+ggplot(df, aes(x = Date_réception_DPE)) + 
+  geom_histogram(binwidth = 30 * 1.25, fill = "blue", color = "black") +  # Largeur de bin augmentée de 25%
+  labs(title = "Distribution des dates de réception du DPE", x = "Date", y = "Nombre de DPE") +
+  scale_x_date(labels = function(x) paste0("T", quarter(x), "-", year(x)), 
+               date_breaks = "3 months") +  # Intervalle de 3 mois (un trimestre)
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))  # Rotation des labels pour lisibilité
+
+```

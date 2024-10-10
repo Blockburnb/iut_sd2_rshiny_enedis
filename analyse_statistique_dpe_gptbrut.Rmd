@@ -50,7 +50,7 @@ contingency_table <- table(data$Type_énergie_climatisation, data$Etiquette_DPE,
 
 # Test du khi-deux
 chi_square_test <- chisq.test(contingency_table)
-
+?chisq.test()
 # Résultat du test du Khi-deux
 cat("Le test du Khi-deux donne une p-valeur de : ", chi_square_test$p.value)
 ```
