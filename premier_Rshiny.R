@@ -6,9 +6,10 @@ library(DT)
 library(ggplot2)
 library(plotly)
 library(shinythemes)
-library(jsonlite)  # Pour lire les données depuis l'API JSON
+library(jsonlite)
+library(shinyjs)  # Pour gérer l'authentification
 
-# CSS personnalisé
+# CSS personnalisé avec style visuel plus détaillé
 css_custom <- "
   body {
     font-family: Arial, sans-serif;
@@ -18,26 +19,40 @@ css_custom <- "
     background-color: #333333;
     color: #FFFFFF;
   }
+  .value-box {
+    font-size: 20px;
+    font-weight: bold;
+  }
 "
 
 # Fonction pour charger les données depuis une API
 load_data_from_api <- function() {
-  # Remplacez par l'URL de votre API
   data <- jsonlite::fromJSON("http://example.com/api/data")
   return(data)
 }
 
 # Interface utilisateur
 ui <- navbarPage(
-  theme = shinytheme("cosmo"),
   title = "Mon Application Shiny",
+  
+  # Sélecteur de thème
+  tabPanel("Paramètres",
+    sidebarPanel(
+      selectInput("theme", "Choisissez un thème", choices = c("cosmo", "flatly", "cerulean")),
+      actionButton("apply_theme", "Appliquer le thème")
+    ),
+    mainPanel(
+      h4("Sélection de thème dynamique pour l'application")
+    )
+  ),
   
   # Onglet Contexte
   tabPanel("Contexte",
     sidebarPanel(
       actionButton("refresh_data", "Rafraîchir les données"),
       checkboxInput("show_data", "Afficher les données", value = FALSE),
-      selectInput("var_select", "Variable pour les KPI", choices = NULL)
+      selectInput("var_select", "Variable pour les KPI", choices = NULL),
+      h5("Dernière mise à jour :"), textOutput("last_update")
     ),
     mainPanel(
       h3("Présentation des Données"),
@@ -54,13 +69,14 @@ ui <- navbarPage(
     sidebarPanel(
       sliderInput("obs", "Nombre d'observations:", min = 10, max = 100, value = 50),
       selectInput("plot_type", "Type de graphique", choices = c("Histogramme", "Boîte à moustache", "Diagramme", "Nuage de points")),
+      radioButtons("color_scheme", "Choisir un schéma de couleur :", choices = c("Bleu", "Rouge", "Vert")),
       downloadButton("downloadPlot", "Télécharger le graphique")
     ),
     mainPanel(
       h3("Indicateurs Clés"),
       fluidRow(
-        valueBoxOutput("kpi1"),
-        valueBoxOutput("kpi2")
+        valueBoxOutput("kpi1", width = 6),
+        valueBoxOutput("kpi2", width = 6)
       ),
       plotOutput("plot")
     )
@@ -93,24 +109,58 @@ ui <- navbarPage(
 
 # Serveur
 server <- function(input, output, session) {
+  # Authentification utilisateur simple
+  logged_in <- reactiveVal(FALSE)
+  observe({
+    showModal(modalDialog(
+      title = "Connexion",
+      textInput("user", "Utilisateur"),
+      passwordInput("password", "Mot de passe"),
+      footer = tagList(actionButton("login", "Connexion"))
+    ))
+  })
   
-  # Variable réactive pour stocker les données chargées de l'API
+  observeEvent(input$login, {
+    if (input$user == "admin" && input$password == "password") {
+      logged_in(TRUE)
+      removeModal()
+    } else {
+      showNotification("Identifiant ou mot de passe incorrect", type = "error")
+    }
+  })
+  
+  # Quitter si non authentifié
+  observe({
+    if (!logged_in()) {
+      return()
+    }
+  })
+  
+  # Variable réactive pour stocker les données
   data_reactive <- reactiveVal()
+  last_update <- reactiveVal()
   
-  # Charger les données initiales depuis l'API au lancement de l'application
+  # Charger les données initiales depuis l'API
   data_reactive(load_data_from_api())
-  
-  # Mettre à jour les choix des variables pour les sélections après chargement des données
+  last_update(Sys.time())
+
+  # Actualiser les données lors du clic sur le bouton
+  observeEvent(input$refresh_data, {
+    new_data <- load_data_from_api()
+    data_reactive(new_data)
+    last_update(Sys.time())
+  })
+
+  # Afficher la date de la dernière mise à jour
+  output$last_update <- renderText({
+    format(last_update(), "%d %b %Y %H:%M:%S")
+  })
+
+  # Mettre à jour les options des sélections de variables
   observe({
     updateSelectInput(session, "var_select", choices = names(data_reactive()))
     updateSelectInput(session, "x_var", choices = names(data_reactive()))
     updateSelectInput(session, "y_var", choices = names(data_reactive()))
-  })
-  
-  # Rafraîchir les données lorsque le bouton est cliqué
-  observeEvent(input$refresh_data, {
-    new_data <- load_data_from_api()
-    data_reactive(new_data)  # Met à jour les données avec les nouvelles données de l'API
   })
 
   # Afficher le tableau de données
@@ -118,27 +168,30 @@ server <- function(input, output, session) {
     datatable(data_reactive())
   })
 
-  # Calculs de KPI
+  # Calculs de KPI avec des icônes
   output$kpi1 <- renderValueBox({
-    valueBox(value = round(mean(data_reactive()[[input$var_select]], na.rm = TRUE), 2), "Moyenne")
+    valueBox(round(mean(data_reactive()[[input$var_select]], na.rm = TRUE), 2), 
+             "Moyenne", icon = icon("chart-line"))
   })
   output$kpi2 <- renderValueBox({
-    valueBox(value = round(median(data_reactive()[[input$var_select]], na.rm = TRUE), 2), "Médiane")
+    valueBox(round(median(data_reactive()[[input$var_select]], na.rm = TRUE), 2), 
+             "Médiane", icon = icon("balance-scale"))
   })
 
-  # Graphiques dynamiques
+  # Graphiques dynamiques avec schémas de couleurs
   output$plot <- renderPlot({
     req(input$plot_type)
     data <- data_reactive()[1:input$obs, ]
+    color <- ifelse(input$color_scheme == "Bleu", "blue", ifelse(input$color_scheme == "Rouge", "red", "green"))
     
     if (input$plot_type == "Histogramme") {
-      ggplot(data, aes_string(input$var_select)) + geom_histogram()
+      ggplot(data, aes_string(input$var_select)) + geom_histogram(fill = color)
     } else if (input$plot_type == "Boîte à moustache") {
-      ggplot(data, aes_string(x = "1", y = input$var_select)) + geom_boxplot()
+      ggplot(data, aes_string(x = "1", y = input$var_select)) + geom_boxplot(fill = color)
     } else if (input$plot_type == "Diagramme") {
-      ggplot(data, aes_string(x = seq_along(data[[input$var_select]]), y = input$var_select)) + geom_line()
+      ggplot(data, aes_string(x = seq_along(data[[input$var_select]]), y = input$var_select)) + geom_line(color = color)
     } else if (input$plot_type == "Nuage de points") {
-      ggplot(data, aes_string(x = input$var_select, y = input$var_select)) + geom_point()
+      ggplot(data, aes_string(x = input$var_select, y = input$var_select)) + geom_point(color = color)
     }
   })
 
@@ -170,15 +223,3 @@ server <- function(input, output, session) {
     content = function(file) {
       ggsave(file, plot = last_plot())
     }
-  )
-  
-  output$downloadData <- downloadHandler(
-    filename = function() { paste("data_selection-", Sys.Date(), ".csv", sep="") },
-    content = function(file) {
-      write.csv(data_reactive(), file)
-    }
-  )
-}
-
-# Lancer l'application
-shinyApp(ui = ui, server = server)
