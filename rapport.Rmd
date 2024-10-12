@@ -2,7 +2,9 @@
 title: "rapport"
 author: "Franklin BECK"
 date: "`r Sys.Date()`"
-output: pdf_document
+output: word_document
+params:
+  type_log_to_remove: "" #vide, existant ou neuf
 ---
 
 ```{r setup, include=FALSE}
@@ -12,8 +14,9 @@ library(ggplot2)
 library(scales)
 library(lubridate)
 
-df=read.csv2("dpe-v2-logements-existants.csv",,",")
-
+df=read.csv2("logements_69.csv",,",")
+df=df[df$Type_de_logement != params$type_log_to_remove, ]
+summary(df)
 # Conversion de la colonne 'Date_réception_DPE' en format Date
 df$Date_réception_DPE <- as.Date(df$Date_réception_DPE, format = "%Y-%m-%d")
 ```

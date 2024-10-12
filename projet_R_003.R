@@ -28,10 +28,9 @@ for(i in numeric_range) { #boucle par année
     params <- list(
       page = 1,
       size = 10000,
-      select = "N°DPE,Code_postal_(BAN),Etiquette_DPE,Date_réception_DPE",
+      #select = "N°DPE,Code_postal_(BAN),Etiquette_DPE,Date_réception_DPE",
       q = as.character(code_postal),
       q_fields = "Code_postal_(BAN)",
-      #qs = paste("Date_réception_DPE:[",i,"-01-01 TO ",as.numeric(format(Sys.Date(), format="%Y")),"-12-31]")
       qs = paste0("Date_réception_DPE:[",i,"-01-01 TO ",i,"-12-31]")
     )
     
@@ -59,6 +58,7 @@ for(i in numeric_range) { #boucle par année
         df_neufs <- bind_rows(df_neufs, df_temp2)
       }
     }
+    print(paste("Téléchargement de l'année :",i,", code postal :", code_postal))
   }
 }
 
