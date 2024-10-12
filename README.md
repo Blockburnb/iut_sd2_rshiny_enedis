@@ -21,7 +21,7 @@ Auvergne Rhone Alpes , l'application permet ume consultations rapide des princio
 ## Contenu du git
 
 1. Rapport(/rapport.Rmd)
-2. App Shiny(/premier_Rshiny.R)
+2. App Shiny(https://github.com/Blockburnb/iut_sd2_rshiny_enedis_alpha/blob/main/premier_Rshiny.R)
 3. Extracteur de données(/projet_R_003.R)
 
 
