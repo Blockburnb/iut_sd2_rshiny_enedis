@@ -20,12 +20,13 @@ Auvergne Rhone Alpes , l'application permet ume consultations rapide des princio
 
 ## Contenu du git
 
-1. Rapport(/rapport.Rmd)
-2. App Shiny(https://github.com/Blockburnb/iut_sd2_rshiny_enedis_alpha/blob/main/premier_Rshiny.R)
-3. Extracteur de données(/projet_R_003.R)
+1. [Rapport](/rapport.Rmd)
+2. [App Shiny](/premier_Rshiny.R)
+3. [Extracteur de données](/projet_R_003.R)
 
 
 > [!IMPORTANT]
-> Les resources utilisées : [asardell](https://github.com/asardell/IUT_SD1)
+> Les resources utilisées : [asardell](https://github.com/asardell/IUT_SD1) [API des logements neufs :](https://data.ademe.fr/datasets/dpe-v2-logements-neufs/api-doc)
+[API des logements existants :](https://data.ademe.fr/datasets/dpe-v2-logements-existants/api-doc) [Base Adresse Nationale au format .csv :](https://adresse.data.gouv.fr/donnees-nationales)
 
 > Git by Franklin
