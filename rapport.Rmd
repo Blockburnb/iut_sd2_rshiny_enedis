@@ -1,0 +1,116 @@
+---
+title: "rapport"
+author: "Franklin BECK"
+date: "`r Sys.Date()`"
+output: html_document
+params:
+  type_log_to_remove: "" #vide, existant ou neuf
+  code_postale_to_keep: ""
+---
+```{r install, eval=FALSE, include=FALSE}
+install.packages("ggplot2")
+install.packages("scales")
+install.packages("lubridate")
+install.packages("dplyr")
+```
+```{r setup, include=FALSE}
+library(ggplot2)
+library(scales)
+library(lubridate)
+library(dplyr)
+
+df=read.csv2("logements_69_final.csv",,",")
+
+if (!is.null(params$code_postale_to_keep) && params$code_postale_to_keep != "") {
+  df <- df %>% filter(!is.na("Code_postal_(BAN)") & "Code_postal_(BAN)" != params$code_postale_to_keep)
+}
+
+if (!is.null(params$type_log_to_remove) && params$type_log_to_remove != "") {
+  df <- df %>% filter(!is.na(Type_de_logement) & Type_de_logement != params$type_log_to_remove)
+} 
+
+# Conversion de la colonne 'Date_réception_DPE' en format Date
+df$Date_réception_DPE <- as.Date(df$Date_réception_DPE, format = "%Y-%m-%d")
+```
+```{r kpi, echo=FALSE}
+nodpe=length(df$Etiquette_DPE) #nb dpe distribué
+
+adpe=df$Date_réception_DPE[which.min(df$Date_réception_DPE)]# Afficher le DPE le plus ancien
+
+rdpe=df$Date_réception_DPE[which.max(df$Date_réception_DPE)]# Afficher le DPE le plus recent
+
+dpeval=round(as.integer(table(df$Date_fin_validité_DPE>Sys.Date())["TRUE"])/length(df$Date_fin_validité_DPE)*100,2) #% dpe valide
+
+pvl=round(as.integer(table(df$`Présence_production_PV_(0/1)`)["1"])/sum(!is.na(df$`Présence_production_PV_(0/1)`))*100,2) #% des logements avec des panneaux 
+df$`Présence_production_PV_(0/1)`
+# Corrélation entre surface climatisée et consommation énergétique
+if (params$type_log_to_remove==""&&params$code_postale_to_keep==""){
+  correlation <- cor(as.numeric(df$Surface_climatisée), as.numeric(df$Production_électricité_PV_.kWhep.an.), use = "complete.obs")
+  } else {correlation="non calculé"}
+
+```
+
+# KPI
+
+Nombre total de DPE : `r nodpe`
+
+DPE le plus ancien : `r adpe`
+
+DPE le plus récent : `r rdpe`
+
+Pourcentage de DPE encore valides : `r dpeval`%
+
+Pourcentage de logements avec panneaux photovoltaïques : `r pvl`%
+
+Corrélation [^1] entre surface climatisée et production d'électricité photovoltaïque : 
+
+[^1]: Ce calcul permet de vérifier s'il existe une relation linéaire entre la surface climatisée et la production d'électricité photovoltaïque.
+
+```{r graph_rep_dpe, echo=FALSE}
+# Graphique en camembert
+if (params$type_log_to_remove==""&&params$code_postale_to_keep==""){
+dpe_counts <- table(df$Etiquette_DPE)
+colors <- rainbow(length(dpe_counts))
+pie(dpe_counts,labels = "", col = colors, main = "Répartition DPE par catégorie")
+legend("bottomright", legend = names(dpe_counts), fill = colors, box.lty = 1, title = "Catégories DPE")
+}else{print("Répartition DPE par catégorie non possible")}
+```
+
+## Graphique de répartition des catégories DPE
+
+Le graphique ci-dessus représente la répartition des différentes **catégories DPE** (Diagnostic de Performance Énergétique) au sein du jeu de données. Chaque segment du camembert correspond à une catégorie spécifique, tandis que la **légende** en bas à droite identifie les différentes catégories avec une couleur attribuée à chacune.
+
+```{r graph_hist_recepdpe, echo=FALSE}
+# Histogramme avec labels de l'axe x au format trimestre-année
+ggplot(df, aes(x = Date_réception_DPE)) + 
+  geom_histogram(binwidth = 30 * 1.25, fill = "blue", color = "black") +  # Largeur de bin augmentée de 25%
+  labs(title = "Distribution des dates de réception du DPE", x = "Date", y = "Nombre de DPE") +
+  scale_x_date(labels = function(x) paste0("T", quarter(x), "-", year(x)), 
+               date_breaks = "3 months") +  # Intervalle de 3 mois (un trimestre)
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))  # Rotation des labels pour lisibilité
+
+```
+
+## Distribution des dates de réception des DPE
+
+Ce graphique présente l'**histogramme** de la distribution des **dates de réception des DPE** (Diagnostic de Performance Énergétique) sur la période du `r adpe` au `r rdpe`. L'axe des abscisses (**x**) est formaté en **trimestre-année** (par exemple, "T1-2023" pour le premier trimestre 2023), et montre comment les DPE ont été reçus au fil du temps.
+
+Chaque barre représente le nombre de DPE reçus durant une période de 3 mois (un trimestre).
+
+
+---
+
+
+#### Rappel de l'étude de la corrélation
+
+- Si la corrélation est proche de 1, cela suggère que plus un bâtiment a une grande surface climatisée, plus il tend à produire d'électricité photovoltaïque.
+
+- Si la corrélation est proche de 0, cela signifie qu'il n'y a pas de relation linéaire entre ces deux variables.
+
+- Si la corrélation est proche de -1, cela indiquerait que plus la surface climatisée est grande, plus la production d'électricité photovoltaïque est faible.
+
+###### Hypothèses possibles :
+
+- Corrélation positive attendue : Une hypothèse pourrait être que les bâtiments ayant une plus grande surface climatisée sont de plus grande taille et sont donc plus susceptibles d'avoir de l'espace pour installer des panneaux photovoltaïques. Cela pourrait conduire à une corrélation positive.
+
+- Corrélation nulle ou faible : Si la corrélation est faible ou nulle, cela pourrait suggérer que la surface climatisée n'a pas d'impact direct sur la quantité d'électricité produite par les panneaux photovoltaïques. En effet, la production d'électricité PV dépend davantage de la surface disponible pour les panneaux solaires et de l'ensoleillement, plutôt que de la surface climatisée.
