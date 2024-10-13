@@ -176,6 +176,7 @@ server <- function(input, output, session) {
   })
   
   # Carte interactive avec Leaflet
+  leafletOutput("map", width = "100%", height = "500px")
   output$map <- renderLeaflet({
     req(data_reactive())
     leaflet(data_reactive()) %>%
