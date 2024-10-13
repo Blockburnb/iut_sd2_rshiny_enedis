@@ -180,7 +180,7 @@ server <- function(input, output, session) {
     req(data_reactive())
     leaflet(data_reactive()) %>%
       addTiles() %>%
-      { if (input$show_markers) addMarkers(~lon, ~lat, popup = ~as.character(name)) else . }
+      { if (input$show_markers) addMarkers(lng = ~lon,lat= ~lat, popup = ~as.character(name)) else . }
   })
   
   # Calcul de corrélation et régression linéaire
