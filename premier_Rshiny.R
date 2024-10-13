@@ -176,17 +176,17 @@ server <- function(input, output, session) {
   })
   
   # Carte interactive avec Leaflet
-  leafletOutput("map", width = "100%", height = "500px")
+leafletOutput("map", width = "100%", height = "500px")
 
 output$map <- renderLeaflet({
   req(data_reactive())
   map <- leaflet(data_reactive()) %>%
     addTiles()
 
-  # Ajoute les marqueurs seulement si `input$show_markers` est TRUE
-  if (input$show_markers) {
+  # Vérifier si les colonnes nécessaires sont présentes
+  if (input$show_markers && all(c("lon", "lat") %in% names(data_reactive()))) {
     map <- map %>%
-      addMarkers(lng = ~lon, lat = ~lat, popup = ~as.character(name))
+      addMarkers(lng = ~lon, lat = ~lat)  # Supprime l'argument popup
   }
 
   map  # Retourne l'objet `leaflet` final
