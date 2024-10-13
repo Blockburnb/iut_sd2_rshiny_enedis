@@ -177,12 +177,20 @@ server <- function(input, output, session) {
   
   # Carte interactive avec Leaflet
   leafletOutput("map", width = "100%", height = "500px")
-  output$map <- renderLeaflet({
-    req(data_reactive())
-    leaflet(data_reactive()) %>%
-      addTiles() %>%
-      { if (input$show_markers) addMarkers(lng = ~lon,lat= ~lat, popup = ~as.character(name)) else . }
-  })
+
+output$map <- renderLeaflet({
+  req(data_reactive())
+  map <- leaflet(data_reactive()) %>%
+    addTiles()
+
+  # Ajoute les marqueurs seulement si `input$show_markers` est TRUE
+  if (input$show_markers) {
+    map <- map %>%
+      addMarkers(lng = ~lon, lat = ~lat, popup = ~as.character(name))
+  }
+
+  map  # Retourne l'objet `leaflet` final
+})
   
   # Calcul de corrélation et régression linéaire
   observeEvent(input$calculate, {
